@@ -7,6 +7,7 @@ use Symfony\Component\DomCrawler\Crawler;
 use GuzzleHttp;
 use App\Models\Site;
 use App\Models\CrawlUrl;
+use stdClass;
 
 class CrawlHandle extends Command
 {
@@ -97,8 +98,9 @@ class CrawlHandle extends Command
         $urlChild = $urlChild === '' ? $this->site->url : $urlChild;
 
         $client = new GuzzleHttp\Client(['verify' => false]);
-        $res = $client->request('GET', 'https://www.scirp.org/journal/paperinformation.aspx?paperid=115612');
+        $res = $client->request('GET', $urlChild);
         $crawler = new Crawler($res->getBody());
+        $crawlerDescription = $crawlerLink = $crawler;
 
         //get data
         $title = $crawler->filter($this->site->filter_title)->each(function (Crawler $node, $i) {
@@ -106,43 +108,47 @@ class CrawlHandle extends Command
         })[0];
 
         //description
-        $arrayFilterDescription = explode(" ", "div.articles_main div 3 p 1");
+        $arrayFilterDescription = explode(" ", $this->site->filter_description);
         foreach ($arrayFilterDescription as $filter) {
             if (preg_match('/^[0-9 +-]*$/', $filter)) {
-                $crawler = $crawler->eq($filter);
+                $crawlerDescription = $crawlerDescription->eq($filter);
             } else {
-                $crawler = $crawler->filter($filter);
+                $crawlerDescription = $crawlerDescription->filter($filter);
             }
         }
-        $description = $crawler->text();
+        $description = $crawlerDescription->text();
 
         //link
-        $arrayFilter = explode(" ", "div.articles_main div 2 a 10");
+        $arrayFilter = explode(" ", $this->site->filter_view);
         foreach ($arrayFilter as $filter) {
             if (preg_match('/^[0-9 +-]*$/', $filter)) {
-                $crawler = $crawler->eq($filter);
+                $crawlerLink = $crawlerLink->eq($filter);
             } else {
-                $crawler = $crawler->filter($filter);
+                $crawlerLink = $crawlerLink->filter($filter);
             }
         }
-        $link = $crawler->attr('href');
-        dd($link);
+        $link = $crawlerLink->attr('href');
 
-        //config data
-        // if ($title !== '' && $description !== '' && $link !== '') {
-        //     $dataStatus = 1;
-        //     $data = [];
-        // } else {
-        //     $dataStatus = 0;
-        // }
+        // config data
+        if ($title !== '' || $description !== '' || $link !== '') {
+            $dataStatus = 1;
+            $data = (object)[
+                'link' => $link,
+                'title' => $title,
+                'desription' => $description,
+            ];
+        } else {
+            $dataStatus = 0;
+        }
 
-        // CrawlUrl::create([
-        //     'site' => $this->site->url,
-        //     'url' => $urlChild,
-        //     'data_status' => $dataStatus,
-        //     'data' => '{}',
-        //     'status' => $res->getStatusCode(),
-        //     'visted' => 1
-        // ]);
+
+        CrawlUrl::create([
+            'site' => $this->site->url,
+            'url' => $urlChild,
+            'data_status' => $dataStatus,
+            'data' => $data,
+            'status' => $res->getStatusCode(),
+            'visited' => 1
+        ]);
     }
 }
