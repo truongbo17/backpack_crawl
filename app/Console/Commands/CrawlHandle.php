@@ -52,16 +52,18 @@ class CrawlHandle extends Command
         foreach ($listSite as $site) {
             $this->site = $site;
 
+            $client = new GuzzleHttp\Client(['verify' => false]);
+            $res = $client->request('GET', $this->site->url);
             $site->update([
                 // 'status' => $res->getStatusCode() //set status (200,500,404...)
             ]);
 
-            if ($site->filter_parent !== null) {
+            if ($site->filter_parent !== "") {
                 //crawl from home
                 $this->parent();
             } else {
                 //crawl from detail
-                $this->child('');
+                $this->child();
             }
         }
     }
@@ -93,19 +95,28 @@ class CrawlHandle extends Command
         });
     }
 
-    public function child($urlChild)
+    public function child($urlChild = false)
     {
-        $urlChild = $urlChild === '' ? $this->site->url : $urlChild;
-
+        if (!$urlChild) {
+            $urlChild = $this->site->url;
+        } else {
+            $urlChild = $urlChild;
+        };
         $client = new GuzzleHttp\Client(['verify' => false]);
         $res = $client->request('GET', $urlChild);
         $crawler = new Crawler($res->getBody());
-        $crawlerDescription = $crawlerLink = $crawler;
+        $crawlerTitle = $crawlerDescription = $crawlerLink = $crawler;
 
-        //get data
-        $title = $crawler->filter($this->site->filter_title)->each(function (Crawler $node, $i) {
-            return $node->text();
-        })[0];
+        //title
+        $arrayFilterTitle = explode(" ", $this->site->filter_title);
+        foreach ($arrayFilterTitle as $filter) {
+            if (preg_match('/^[0-9 +-]*$/', $filter)) {
+                $crawlerTitle = $crawlerTitle->eq($filter);
+            } else {
+                $crawlerTitle = $crawlerTitle->filter($filter);
+            }
+        }
+        $title = $crawlerTitle->text();
 
         //description
         $arrayFilterDescription = explode(" ", $this->site->filter_description);
