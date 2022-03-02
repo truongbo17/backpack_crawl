@@ -16,3 +16,4 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [\App\Http\Controllers\Crawl\HomeController::class, 'index']);
 
 Route::get('crawl', [\App\Http\Controllers\Crawl\CrawlController::class, 'handle']);
+Route::get('linkpdf', [\App\Http\Controllers\Crawl\CrawlController::class, 'linkpdf']);
