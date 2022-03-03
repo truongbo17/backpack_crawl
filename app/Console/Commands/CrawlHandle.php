@@ -58,7 +58,7 @@ class CrawlHandle extends Command
                 // 'status' => $res->getStatusCode() //set status (200,500,404...)
             ]);
 
-            if ($site->filter_parent !== "") {
+            if (strlen($site->filter_parent) > 0) {
                 //crawl from home
                 $this->parent();
             } else {
@@ -76,7 +76,7 @@ class CrawlHandle extends Command
 
         $crawler->filter($this->site->filter_parent)->each(function (Crawler $node, $i) {
 
-            //get link from node->(don't tag a)
+            //get link from node->(don't tag a,parent of a)
             preg_match_all('/<a[^>]+href=([\'"])(?<href>.+?)\1[^>]*>/i', $node->html(), $result);
 
             if (!empty($result) && isset($result['href'][0])) {
@@ -105,7 +105,7 @@ class CrawlHandle extends Command
         $client = new GuzzleHttp\Client(['verify' => false]);
         $res = $client->request('GET', $urlChild);
         $crawler = new Crawler($res->getBody());
-        $crawlerTitle = $crawlerDescription = $crawlerLink = $crawler;
+        $crawlerTitle = $crawlerDescription = $crawlerLink = $crawlerLinkChild = $crawler;
 
         //title
         $arrayFilterTitle = explode(" ", $this->site->filter_title);
@@ -116,7 +116,9 @@ class CrawlHandle extends Command
                 $crawlerTitle = $crawlerTitle->filter($filter);
             }
         }
-        $title = $crawlerTitle->text();
+        if ($crawlerTitle->count()) {
+            $title = $crawlerTitle->text();
+        }
 
         //description
         $arrayFilterDescription = explode(" ", $this->site->filter_description);
@@ -127,9 +129,11 @@ class CrawlHandle extends Command
                 $crawlerDescription = $crawlerDescription->filter($filter);
             }
         }
-        $description = $crawlerDescription->text();
+        if ($crawlerDescription->count()) {
+            $description = $crawlerDescription->text();
+        }
 
-        //link
+        //view
         $arrayFilter = explode(" ", $this->site->filter_view);
         foreach ($arrayFilter as $filter) {
             if (preg_match('/^[0-9 +-]*$/', $filter)) {
@@ -138,11 +142,14 @@ class CrawlHandle extends Command
                 $crawlerLink = $crawlerLink->filter($filter);
             }
         }
-        $link = $crawlerLink->attr('href');
+        if ($crawlerLink->count()) {
+            $link = $crawlerLink->attr('href');
+        }
 
         // config data
-        if ($title !== '' || $description !== '' || $link !== '') {
+        if (isset($title) && isset($description) && isset($link)) {
             $dataStatus = 1;
+
             $data = (object)[
                 'link' => $link,
                 'title' => $title,
@@ -150,9 +157,10 @@ class CrawlHandle extends Command
             ];
         } else {
             $dataStatus = 0;
+            $data = (object)[];
         }
 
-
+        // store data
         CrawlUrl::create([
             'site' => $this->site->url,
             'url' => $urlChild,
@@ -161,5 +169,33 @@ class CrawlHandle extends Command
             'status' => $res->getStatusCode(),
             'visited' => 1
         ]);
+
+        //-------------------------------------------------------------------------------------------
+        if ($this->site->filter_link === null) {
+            return;
+        }
+        //link child from involve post
+        $arrayFilterLinkChild = explode(" ", $this->site->filter_link);
+        foreach ($arrayFilterLinkChild as $filter) {
+            if (preg_match('/^[0-9 +-]*$/', $filter)) {
+                $crawlerLinkChild = $crawlerLinkChild->eq($filter);
+            } else {
+                $crawlerLinkChild = $crawlerLinkChild->filter($filter);
+            }
+        }
+        if ($crawlerLinkChild->count()) {
+            $linkChildInvolve = $crawlerLinkChild->attr('');
+
+            // //check url (http,https,www)
+            if (filter_var($linkChildInvolve, FILTER_VALIDATE_URL) === FALSE) {
+                //get url home
+                $array = explode('/', $this->site->url);
+                array_pop($array);
+                $urlLinkChild = implode('/', $array) . '/' . $linkChildInvolve;
+            } else {
+                $urlLinkChild = $linkChildInvolve;
+            }
+            $this->child($urlLinkChild);
+        }
     }
 }
