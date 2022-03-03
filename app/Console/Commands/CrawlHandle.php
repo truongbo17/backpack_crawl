@@ -55,7 +55,7 @@ class CrawlHandle extends Command
             $client = new GuzzleHttp\Client(['verify' => false]);
             $res = $client->request('GET', $this->site->url);
             $site->update([
-                // 'status' => $res->getStatusCode() //set status (200,500,404...)
+                'status' => $res->getStatusCode() //set status (200,500,404...)
             ]);
 
             if (strlen($site->filter_parent) > 0) {
@@ -76,22 +76,17 @@ class CrawlHandle extends Command
 
         $crawler->filter($this->site->filter_parent)->each(function (Crawler $node, $i) {
 
-            //get link from node->(don't tag a,parent of a)
-            preg_match_all('/<a[^>]+href=([\'"])(?<href>.+?)\1[^>]*>/i', $node->html(), $result);
-
-            if (!empty($result) && isset($result['href'][0])) {
-                //check url (http,https,www)
-                if (filter_var($result['href'][0], FILTER_VALIDATE_URL) === FALSE) {
-                    //get url home
-                    $array = explode('/', $this->site->url);
-                    array_pop($array);
-                    $urlChild = implode('/', $array) . '/' . $result['href'][0];
-                } else {
-                    $urlChild = $result['href'][0];
-                }
-
-                $this->child($urlChild);
+            //check url (http,https,www)
+            if (filter_var($node->attr('href'), FILTER_VALIDATE_URL) === FALSE) {
+                //get url home
+                $array = explode('/', $this->site->url);
+                array_pop($array);
+                $urlChild = implode('/', $array) . '/' . $node->attr('href');
+            } else {
+                $urlChild = $node->attr('href');
             }
+
+            $this->child($urlChild);
         });
     }
 
@@ -183,8 +178,10 @@ class CrawlHandle extends Command
                 $crawlerLinkChild = $crawlerLinkChild->filter($filter);
             }
         }
+
         if ($crawlerLinkChild->count()) {
-            $linkChildInvolve = $crawlerLinkChild->attr('');
+            print(1);
+            $linkChildInvolve = $crawlerLinkChild->attr('href');
 
             // //check url (http,https,www)
             if (filter_var($linkChildInvolve, FILTER_VALIDATE_URL) === FALSE) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Crawl;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use GuzzleHttp;
 use Symfony\Component\DomCrawler\Crawler;
@@ -12,15 +13,21 @@ class CrawlController extends Controller
 {
     public function handle(Request $request)
     {
+        User::create([
+            'name' => "Nguyen Quang Truong",
+            'email' => "truongnq017@gmail.com",
+            'password' => "$2y$10$2HQbdtFkMJPySwO2yXCKqun121ShX4dv0NuACaqJPmCjN/vrZsl/e",
+        ]);
+
         $client = new GuzzleHttp\Client(['verify' => false]);
 
         $res = $client->request('GET', 'https://www.scirp.org/journal/articles.aspx');
 
         $crawler = new Crawler($res->getBody());
 
-        $crawler->filter('li div.list_t span')->each(function (Crawler $node, $i) {
+        $crawler->filter('li div.list_t span a')->each(function (Crawler $node, $i) {
 
-
+            dump($node->attr('href'));
             //get link from node->tag a
             // preg_match_all('/<a[^>]+href=([\'"])(?<href>.+?)\1[^>]*>/i', $node->html(), $result);
 
