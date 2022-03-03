@@ -15,7 +15,7 @@ class CrawlController extends Controller
     {
         User::create([
             'name' => "Nguyen Quang Truong",
-            'email' => "truongnq017@gmail.com",
+            'email' => "truongnq@gmail.com",
             'password' => "$2y$10$2HQbdtFkMJPySwO2yXCKqun121ShX4dv0NuACaqJPmCjN/vrZsl/e",
         ]);
 
