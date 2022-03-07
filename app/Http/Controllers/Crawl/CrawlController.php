@@ -13,12 +13,6 @@ class CrawlController extends Controller
 {
     public function handle(Request $request)
     {
-        User::create([
-            'name' => "Nguyen Quang Truong",
-            'email' => "truongnq@gmail.com",
-            'password' => "$2y$10$2HQbdtFkMJPySwO2yXCKqun121ShX4dv0NuACaqJPmCjN/vrZsl/e",
-        ]);
-
         $client = new GuzzleHttp\Client(['verify' => false]);
 
         $res = $client->request('GET', 'https://www.scirp.org/journal/articles.aspx');
